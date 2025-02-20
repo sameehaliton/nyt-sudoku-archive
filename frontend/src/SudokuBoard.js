@@ -144,9 +144,11 @@ useEffect(() => {
                                 key={`${rowIndex}-${colIndex}`}
                                 style={{
                                     ...styles.cell, 
-                                    backgroundColor: bgColor,
                                     fontSize: typeof cell === "string" && cell.length > 1 ? "12px" : "20px", // Smaller font for candidates
-                                color: typeof cell === "string" && cell.length > 1 ? "gray" : "black" // Different color for candidates
+                                    color: typeof cell === "string" && cell.length > 1 ? "gray" : "black",
+                                    backgroundColor: originalBoard[rowIndex][colIndex] !== 0 ? "#d3d3d3" : "white",// Different color for candidates
+                                    fontWeight: originalBoard[rowIndex][colIndex] !== 0 ? "bold" : "normal", // ✅ Bold original numbers
+
                                 }}
                                 onClick={() => handleCellClick(rowIndex, colIndex )}
                             >
