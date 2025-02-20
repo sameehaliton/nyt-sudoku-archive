@@ -1,6 +1,7 @@
 import React, {useState, useEffect} from "react";
 
 function SudokuBoard ({ initialPuzzle}) {
+    const [originalBoard, setOriginalBoard] = useState([]);
     const [board, setBoard] = useState(() =>
         initialPuzzle && Array.isArray(initialPuzzle) && initialPuzzle.length === 81
             ? Array.from({ length: 9 }, (_, i) => initialPuzzle.slice(i * 9, i * 9 + 9))
@@ -9,14 +10,14 @@ function SudokuBoard ({ initialPuzzle}) {
 
     const [selectedCell, setSelectedCell] = useState(null);
     const [mode, setMode] = useState("normal");
-    const [autoCandidate, setAutoCandidate] = useState(false);
-    
+
     useEffect(() => {
         if (Array.isArray(initialPuzzle) && initialPuzzle.length === 81) {
             const formattedBoard = Array.from({ length: 9 }, (_, i) =>
                 initialPuzzle.slice(i * 9, i * 9 + 9)
             );
             console.log("Formatted Board:", formattedBoard);
+            setOriginalBoard(formattedBoard); // ✅ Save the initial state
             setBoard(formattedBoard);
         } else {
             console.error("Invalid initialPuzzle format:", initialPuzzle);
@@ -24,29 +25,30 @@ function SudokuBoard ({ initialPuzzle}) {
     }, [initialPuzzle]);
 
     console.log("Initial Puzzle:", initialPuzzle);
+    const [autoCandidate, setAutoCandidate] = useState(false);
 
-    // ✅ This effect initializes the board when auto-candidate mode is enabled
     useEffect(() => {
         console.log("Auto-candidate mode toggled:", autoCandidate);
     
         if (autoCandidate) {
-            setBoard(prevBoard => {
-                const newBoard = prevBoard.map((row, rowIndex) =>
+            setBoard(prevBoard =>
+                prevBoard.map((row, rowIndex) =>
                     row.map((cell, colIndex) => {
-                        if (cell === "" || !isNaN(cell)) { // ✅ Only update empty cells
+                        if (originalBoard[rowIndex][colIndex] === 0) { // ✅ Only update empty cells
                             const candidates = getCandidateNumbers(rowIndex, colIndex, prevBoard);
                             console.log(`Final Candidates for (${rowIndex}, ${colIndex}):`, candidates);
                             return candidates.length > 0 ? candidates.join("") : "";
                         }
-                        return cell; // Keep existing numbers
+                        return cell; // ✅ Keep original numbers
                     })
-                );
-    
-                console.log("New Board with Candidates:", newBoard);
-                return newBoard;
-            });
+                )
+            );
+        } else {
+            console.log("Restoring original board...");
+            setBoard(originalBoard);
         }
-    }, [autoCandidate]); 
+    }, [autoCandidate, originalBoard]); // ✅ Runs only when Auto-Candidate Mode toggles
+    
     
 
 // ✅ This effect runs AFTER the board updates and calculates candidates
