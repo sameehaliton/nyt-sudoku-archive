@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import SudokuBoard from "./SudokuBoard";
-
+import Header from "./components/Header";
+import { minutesInHour } from "date-fns/constants";
 
 function PuzzlePage() {
     const { date, difficulty } = useParams();
@@ -39,20 +40,54 @@ function PuzzlePage() {
                 setLoading(false);
             }
         }
+
         fetchPuzzle();
     }, [date, difficulty]);
-    if (loading) return <p>Loading...</p>;
-    if (error) return <p>Error: {error}</p>;
+
+    if (loading) return <p style={styles.loading}>Loading Sudoku Puzzle...</p>;
+    if (error) return <p style={styles.error}>Error: {error}</p>;
+    
     return (
-        <div>
-            <h1>Sudoku Puzzle</h1>
-            <p>Difficulty: {difficulty}</p>
-            <p>Date: {date}</p>
-            {/* Sudoku Board */}
+        <div style={styles.container}>
+        <Header difficulty={difficulty} date={date} />  {/* ✅ Add the Header at the top */}
+        
+        <div style={styles.boardWrapper}>
             {puzzle ? <SudokuBoard initialPuzzle={puzzle} /> : <p>No puzzle found</p>}
-        </div>
+     </div>
+    </div>
 
     );
 }
+const styles = {
+    container: {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center", // Centers all content horizontally
+        justifyContent: "center",
+        textAlign: "center",
+        padding: "20px",
+        width: "100%"
+    },
+    boardWrapper: {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center", // Ensures the Sudoku board stays centered
+        justifyContent: "center",
+        width: "100%",
+        maxWidth: "500px",
+        marginTop: "20px",
+    },
+    loading: {
+        fontSize: "20px",
+        fontStyle: "italic",
+        color: "gray",
+    },
+    error: {
+        fontSize: "18px",
+        color: "red",
+        fontWeight: "bold",
+    },
+};
+
 
 export default PuzzlePage;

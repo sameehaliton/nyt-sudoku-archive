@@ -10,6 +10,10 @@ function SudokuBoard ({ initialPuzzle}) {
 
     const [selectedCell, setSelectedCell] = useState(null);
     const [mode, setMode] = useState("normal");
+    const isThickBorder = (rowIndex, colIndex) => ({
+        borderRight: colIndex === 8  ? "3px solid black" : colIndex % 3 === 2 ? "3px solid black" : "1px solid black",
+    
+    });
 
     useEffect(() => {
         if (Array.isArray(initialPuzzle) && initialPuzzle.length === 81) {
@@ -17,8 +21,8 @@ function SudokuBoard ({ initialPuzzle}) {
                 initialPuzzle.slice(i * 9, i * 9 + 9)
             );
             console.log("Formatted Board:", formattedBoard);
-            setOriginalBoard(formattedBoard); // ✅ Save the initial state
-            setBoard(formattedBoard);
+            setOriginalBoard([...formattedBoard.map(row => [...row])]); 
+            setBoard([...formattedBoard.map(row => [...row])]);  
         } else {
             console.error("Invalid initialPuzzle format:", initialPuzzle);
         }
@@ -34,7 +38,7 @@ function SudokuBoard ({ initialPuzzle}) {
             setBoard(prevBoard =>
                 prevBoard.map((row, rowIndex) =>
                     row.map((cell, colIndex) => {
-                        if (originalBoard[rowIndex][colIndex] === 0) { // ✅ Only update empty cells
+                        if (originalBoard?.[rowIndex]?.[colIndex] === 0) { // ✅ Only update empty cells
                             const candidates = getCandidateNumbers(rowIndex, colIndex, prevBoard);
                             console.log(`Final Candidates for (${rowIndex}, ${colIndex}):`, candidates);
                             return candidates.length > 0 ? candidates.join("") : "";
@@ -51,33 +55,37 @@ function SudokuBoard ({ initialPuzzle}) {
     
     
 
-// ✅ This effect runs AFTER the board updates and calculates candidates
-useEffect(() => {
-    if (autoCandidate) {
-        setBoard(prevBoard => {
-            const newBoard = prevBoard.map((row, rowIndex) =>
-                row.map((cell, colIndex) => {
-                    if (cell === "") { // Only update empty cells
-                        const candidates = getCandidateNumbers(rowIndex, colIndex, prevBoard);
-                        console.log(`Final Candidates for (${rowIndex}, ${colIndex}):`, candidates);
-                        return candidates.length > 0 ? candidates.join("") : "";
-                    }
-                    return cell; // Keep existing numbers
-                })
-            );
+    // ✅ This effect runs AFTER the board updates and calculates candidates
+    useEffect(() => {
+        if (autoCandidate) {
+            setBoard(prevBoard => {
+                const newBoard = prevBoard.map((row, rowIndex) =>
+                    row.map((cell, colIndex) => {
+                        if (cell === "") { // Only update empty cells
+                            const candidates = getCandidateNumbers(rowIndex, colIndex, prevBoard);
+                            console.log(`Final Candidates for (${rowIndex}, ${colIndex}):`, candidates);
+                            return candidates.length > 0 ? candidates.join("") : "";
+                        }
+                        return cell; // Keep existing numbers
+                    })
+                );
 
-            // ✅ Check if the board has changed before updating to prevent infinite loops
-            if (JSON.stringify(newBoard) !== JSON.stringify(prevBoard)) {
-                console.log("Updating board with candidates...");
-                return newBoard;
-            }
-            return prevBoard; // No change, prevent re-render
-        });
-    }
-}, [autoCandidate]);
+                // ✅ Check if the board has changed before updating to prevent infinite loops
+                if (JSON.stringify(newBoard) !== JSON.stringify(prevBoard)) {
+                    console.log("Updating board with candidates...");
+                    return newBoard;
+                }
+                return prevBoard; // No change, prevent re-render
+            });
+        }
+    }, [autoCandidate]);
 
     const handleCellClick = ( row, col) => {
+        if (selectedCell && selectedCell.row === row && selectedCell.col === col) {
+            setSelectedCell(null);
+        } else{
         setSelectedCell({ row, col});
+        }
     };
     const getCandidateNumbers = (row, col, board) => {
         if (board[row][col] !== "" && board[row][col].length === 1) return []; // Don't overwrite filled cells
@@ -131,23 +139,32 @@ useEffect(() => {
     };
 
     return (
-        <div>
+    <div style={styles.wrapper}>
         <div style={styles.board}>
             {board.map((row, rowIndex) => (
                 <div key={rowIndex} style={styles.row}>
                     {row.map((cell, colIndex) => {
                         const isSelected = selectedCell && selectedCell.row === rowIndex && selectedCell.col === colIndex;
-                        const bgColor = isSelected ? "#FFD700" : "white";
-                        
+
                         return (
                             <div 
                                 key={`${rowIndex}-${colIndex}`}
                                 style={{
                                     ...styles.cell, 
+                                    ...isThickBorder(rowIndex, colIndex), // ✅ APPLY BORDER FUNCTION
+
                                     fontSize: typeof cell === "string" && cell.length > 1 ? "12px" : "20px", // Smaller font for candidates
                                     color: typeof cell === "string" && cell.length > 1 ? "gray" : "black",
-                                    backgroundColor: originalBoard[rowIndex][colIndex] !== 0 ? "#d3d3d3" : "white",// Different color for candidates
-                                    fontWeight: originalBoard[rowIndex][colIndex] !== 0 ? "bold" : "normal", // ✅ Bold original numbers
+                                    backgroundColor: 
+                                        selectedCell && selectedCell.row === rowIndex && selectedCell.col === colIndex 
+                                            ? "#FFD700"  // Highlighted yellow
+                                            : originalBoard?.[rowIndex]?.[colIndex] !== undefined && originalBoard[rowIndex][colIndex]!== 0 
+                                                ? "#d3d3d3"  // Gray for original numbers
+                                                : "white",   // Default
+                                    fontWeight: (originalBoard[rowIndex] && originalBoard[rowIndex][colIndex] !== undefined && originalBoard[rowIndex][colIndex] !== 0) 
+                                        ? "bold" 
+                                        : "normal",
+
 
                                 }}
                                 onClick={() => handleCellClick(rowIndex, colIndex )}
@@ -159,37 +176,68 @@ useEffect(() => {
                 </div>
             ))}
         </div>
+        
 
         <div style={styles.modeSelector}>
-            <button style={mode === "normal" ? styles.activeMode : styles.inactiveMode} onClick={() => setMode("normal")}>
-                Normal
-            </button>
-            <button style={mode=== "candidate" ? styles.activeMode :styles.inactiveMode} onClick={() => setMode("candidate")}>
-                Candidate
-            </button>
+        <button
+        style={{
+            ...styles.modeButton,
+            
+            ...(mode === "normal" ? styles.activeMode : styles.inactiveMode),
+        }}
+        onClick={() => setMode("normal")}
+    >
+        Normal
+    </button>
+    
+    <button
+        style={{
+            ...styles.modeButton,
+            ...(mode === "candidate" ? styles.activeMode : styles.inactiveMode),
+        }}
+        onClick={() => setMode("candidate")}
+    >
+        Candidate
+    </button>
         </div>
         {/* 🔹 Number Pad Component (Goes Below the Board) */}
 
-        <div style={styles.numberPad}>
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                <button key={num} style={styles.numButton} onClick={() => handleNumberClick(num)}>
-                    {num}
-                </button>
-            ))}
-
-            <button style={styles.numButton} onClick={() => handleNumberClick("")}>X</button>
+        <div style={styles.numberPadContainer}>
+            <div style={styles.numberPad}>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                    <button key={num} style={styles.numButton} onClick={() => handleNumberClick(num)}>
+                        {num}
+                    </button>
+                ))}
+                <button style={styles.numButton} onClick={() => handleNumberClick("")}>X</button>
             </div>
-            <label>
-                <input type="checkbox" checked={autoCandidate} onChange={() => setAutoCandidate(!autoCandidate)} />
-                Auto Candidate Mode
-            </label>
         </div>
-        
-    );
+
+        <label>
+            <input type="checkbox" checked={autoCandidate} onChange={() => setAutoCandidate(!autoCandidate)} />
+            Auto Candidate Mode
+        </label>
+    </div>
+);
 
 }
 
 const styles = {
+    wrapper: {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center", // ✅ Center everything including the board & number pad
+        justifyContent: "center",
+        width: "100%",
+        paddingTop: "20px",
+    },
+    boardContainer: {
+        display: "flex",
+        justifyContent: "center", // Ensures it's centered horizontally
+        alignItems: "center",
+        width: "100%",  // Takes full width to allow centering
+        marginTop: "20px", 
+    },
     board: {
         display: "grid",
         gridTemplateColumns: "repeat(9, 40px)",
@@ -213,10 +261,50 @@ const styles = {
         border: "1px solid black",
         cursor: "pointer",
     },
+    modeSelector: {
+        display: "flex",
+        justifyContent: "center",
+        gap: "10px",
+        marginTop: "15px",
+    },
+    modeButton: {
+        padding: "10px 20px",
+        fontSize: "18px",
+        fontWeight: "bold",
+        cursor: "pointer",
+        borderRadius: "5px",
+        width: "120px",  // ✅ Ensures buttons are equal size
+        height: "50px",  // ✅ Bigger size for better UX
+        textAlign: "center",
+        border: "1px solid black",  // ✅ Thin border for unselected buttons
+        transition: "all 0.2s ease-in-out", // ✅ Smooth effect on hover
+        display: "flex",
+        alignItems: "center",  // ✅ Vertically center text
+        justifyContent: "center",  // ✅ Horizontally center text
+
+    },
+    activeMode: {
+        backgroundColor: "black",
+        color: "white",
+    },
+    inactiveMode: {
+        backgroundColor: "white",
+        color: "black",
+    },
+    touching: {
+        marginLeft: "-1px",  // ✅ Ensures buttons always touch
+    },
+    numberPadContainer: {
+        display: "flex",
+        justifyContent: "center", // ✅ Center the number pad
+        marginTop: "20px",
+    },
     numberPad: {
         display: "grid",
-        gridTemplateColumns: "repeat(5, 1fr)", // Arrange in a grid format
+        gridTemplateColumns: "repeat(auto-fit, minmax(50px, 1fr))", // Makes buttons auto-adjust
         gap: "10px",
+        width: "90%", // Ensures number pad scales well
+        maxWidth: "400px",
         marginTop: "20px",
         justifyContent: "center",
     },
@@ -228,6 +316,7 @@ const styles = {
         borderRadius: "5px",
         border: "1px solid #ccc",
         backgroundColor: "#f9f9f9",
+        
     }
 };
 
